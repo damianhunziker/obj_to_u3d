@@ -196,7 +196,6 @@ class ObjToU3dConverter:
             face_count = mesh.face_number()
             
             # Access vertex and face data directly from pymeshlab
-            # This replaces the temporary file approach that was causing errors
             vertices = []
             faces = []
             
@@ -212,213 +211,98 @@ class ObjToU3dConverter:
             
             # Create IDTF file content
             with open(idtf_file, 'w') as f:
-                f.write(f"""FILE_FORMAT "IDTF"
-FORMAT_VERSION 100
-
-NODE "MODEL" {{
-    NODE_NAME "Model"
-    PARENT_LIST {{
-        PARENT_COUNT 1
-        PARENT 0 {{
-            PARENT_NAME "Scene_Root"
-            PARENT_TM {{
-                1.0 0.0 0.0 0.0
-                0.0 1.0 0.0 0.0
-                0.0 0.0 1.0 0.0
-                0.0 0.0 0.0 1.0
-            }}
-        }}
-    }}
-    RESOURCE_NAME "mesh_0"
-}}
-
-RESOURCE_LIST "MODEL" {{
-    RESOURCE_COUNT 1
-    RESOURCE 0 {{
-        RESOURCE_NAME "mesh_0"
-        MODEL_TYPE "MESH"
-        MESH {{
-            FACE_COUNT {face_count}
-            MODEL_POSITION_COUNT {vertex_count}
-            MODEL_NORMAL_COUNT {vertex_count}
-            MODEL_TEXCOORD_COUNT 0
-            MODEL_BONE_COUNT 0
-            MODEL_SHADING_COUNT 1
-            MODEL_SHADING_DESCRIPTION_LIST {{
-                SHADING_DESCRIPTION 0 {{
-                    TEXTURE_LAYER_COUNT 0
-                    SHADER_ID 0
-                }}
-            }}
-            MESH_FACE_POSITION_LIST {{ // generated from OBJ file
-""")
+                # File header
+                f.write("FILE_FORMAT \"IDTF\"\n")
+                f.write("FORMAT_VERSION 100\n\n")
                 
-                # Write actual face data with real indices
+                # Node section
+                f.write("NODE \"MODEL\" {\n")
+                f.write("    NODE_NAME \"Model\"\n")
+                f.write("    PARENT_LIST {\n")
+                f.write("        PARENT_COUNT 1\n")
+                f.write("        PARENT 0 {\n")
+                f.write("            PARENT_NAME \"<NULL>\"\n")
+                f.write("            PARENT_TM {\n")
+                f.write("                1.0 0.0 0.0 0.0\n")
+                f.write("                0.0 1.0 0.0 0.0\n")
+                f.write("                0.0 0.0 1.0 0.0\n")
+                f.write("                0.0 0.0 0.0 1.0\n")
+                f.write("            }\n")
+                f.write("        }\n")
+                f.write("    }\n")
+                f.write("    RESOURCE_NAME \"mesh_0\"\n")
+                f.write("}\n\n")
+                
+                # Resource section
+                f.write("RESOURCE_LIST \"MODEL\" {\n")
+                f.write("    RESOURCE_COUNT 1\n")
+                f.write("    RESOURCE 0 {\n")
+                f.write("        RESOURCE_NAME \"mesh_0\"\n")
+                f.write("        MODEL_TYPE \"MESH\"\n")
+                f.write("        MESH {\n")
+                f.write(f"            FACE_COUNT {face_count}\n")
+                f.write(f"            MODEL_POSITION_COUNT {vertex_count}\n")
+                f.write(f"            MODEL_NORMAL_COUNT {vertex_count}\n")
+                f.write("            MODEL_DIFFUSE_COLOR_COUNT 1\n")
+                f.write("            MODEL_SPECULAR_COLOR_COUNT 1\n")
+                f.write("            MODEL_TEXTURE_COORD_COUNT 0\n")
+                f.write("            MODEL_BONE_COUNT 0\n")
+                f.write("            MODEL_SHADING_COUNT 1\n")
+                f.write("            MODEL_SHADING_DESCRIPTION_LIST {\n")
+                f.write("                SHADING_DESCRIPTION 0 {\n")
+                f.write("                    TEXTURE_LAYER_COUNT 0\n")
+                f.write("                    SHADER_ID 0\n")
+                f.write("                    AMBIENT_COLOR 0.2 0.2 0.2\n")
+                f.write("                    DIFFUSE_COLOR 0.8 0.8 0.8\n")
+                f.write("                    SPECULAR_COLOR 0.0 0.0 0.0\n")
+                f.write("                    SPECULAR_EXPONENT 10.0\n")
+                f.write("                    ALPHA 1.0\n")
+                f.write("                }\n")
+                f.write("            }\n")
+                
+                # Write vertex positions
+                f.write("            MODEL_POSITION_LIST {\n")
+                for i, v in enumerate(vertices):
+                    f.write(f"                {i}: {v[0]} {v[1]} {v[2]}\n")
+                f.write("            }\n")
+                
+                # Write vertex normals (using vertex positions as normals for now)
+                f.write("            MODEL_NORMAL_LIST {\n")
+                for i, v in enumerate(vertices):
+                    f.write(f"                {i}: {v[0]} {v[1]} {v[2]}\n")
+                f.write("            }\n")
+                
+                # Write face indices
+                f.write("            MODEL_FACE_POSITION_LIST {\n")
                 for i, face in enumerate(faces):
                     f.write(f"                {i}: {face[0]} {face[1]} {face[2]}\n")
+                f.write("            }\n")
                 
-                # Continue writing the IDTF structure
-                f.write("""            }}
-            MESH_FACE_SHADING_LIST {{
-""")
+                # Write face normals (using same indices as positions)
+                f.write("            MODEL_FACE_NORMAL_LIST {\n")
+                for i, face in enumerate(faces):
+                    f.write(f"                {i}: {face[0]} {face[1]} {face[2]}\n")
+                f.write("            }\n")
                 
-                # Write shading for each face
+                # Write face shading descriptions
+                f.write("            MODEL_FACE_SHADING_LIST {\n")
                 for i in range(face_count):
                     f.write(f"                {i}: 0\n")
+                f.write("            }\n")
                 
-                f.write("""            }}
-            MESH_FACE_NORMAL_LIST {{
-""")
-                
-                # Write normals for each face
-                # Here we're using the same normal for all faces to simplify
-                for i in range(face_count):
-                    f.write(f"                {i}: 0 0 0\n")
-                
-                f.write("""            }}
-            MODEL_POSITION_LIST {{
-""")
-                
-                # Write actual vertex positions
-                for i, vertex in enumerate(vertices):
-                    f.write(f"                {i}: {vertex[0]} {vertex[1]} {vertex[2]}\n")
-                
-                f.write("""            }}
-            MODEL_NORMAL_LIST {{
-""")
-                
-                # Write vertex normals
-                # Using simple up vector for all vertices to simplify
-                for i in range(vertex_count):
-                    f.write(f"                {i}: 0.0 0.0 1.0\n")
-                
-                # Complete the IDTF file
-                f.write("""            }}
-        }}
-    }}
-}}
-
-RESOURCE_LIST "SHADER" {{
-    RESOURCE_COUNT 1
-    RESOURCE 0 {{
-        RESOURCE_NAME "default_shader"
-        ATTRIBUTE_USE_VERTEX_COLOR FALSE
-        SHADER_MATERIAL_NAME "DefaultMaterial"
-        SHADER_ACTIVE_TEXTURE_COUNT 0
-    }}
-}}
-
-RESOURCE_LIST "MATERIAL" {{
-    RESOURCE_COUNT 1
-    RESOURCE 0 {{
-        RESOURCE_NAME "DefaultMaterial"
-        MATERIAL_AMBIENT 0.2 0.2 0.2
-        MATERIAL_DIFFUSE 0.8 0.8 0.8
-        MATERIAL_SPECULAR 0.0 0.0 0.0
-        MATERIAL_EMISSIVE 0.0 0.0 0.0
-        MATERIAL_REFLECTIVITY 0.0
-        MATERIAL_OPACITY 1.0
-    }}
-}}
-""")
+                # Close mesh and resource sections
+                f.write("        }\n")
+                f.write("    }\n")
+                f.write("}\n")
             
             print(f"Created IDTF file structure at: {idtf_file}")
+            return idtf_file
         
         except Exception as e:
-            print(f"Error creating IDTF from OBJ: {str(e)}")
+            print(f"Error creating IDTF file: {str(e)}")
             import traceback
             traceback.print_exc()
-            
-            # Create a minimal valid IDTF file as fallback
-            try:
-                with open(idtf_file, 'w') as f:
-                    f.write("""FILE_FORMAT "IDTF"
-FORMAT_VERSION 100
-
-NODE "MODEL" {
-    NODE_NAME "Model"
-    PARENT_LIST {
-        PARENT_COUNT 1
-        PARENT 0 {
-            PARENT_NAME "Scene_Root"
-            PARENT_TM {
-                1.0 0.0 0.0 0.0
-                0.0 1.0 0.0 0.0
-                0.0 0.0 1.0 0.0
-                0.0 0.0 0.0 1.0
-            }
-        }
-    }
-    RESOURCE_NAME "mesh_0"
-}
-
-RESOURCE_LIST "MODEL" {
-    RESOURCE_COUNT 1
-    RESOURCE 0 {
-        RESOURCE_NAME "mesh_0"
-        MODEL_TYPE "MESH"
-        MESH {
-            FACE_COUNT 1
-            MODEL_POSITION_COUNT 3
-            MODEL_NORMAL_COUNT 3
-            MODEL_TEXCOORD_COUNT 0
-            MODEL_BONE_COUNT 0
-            MODEL_SHADING_COUNT 1
-            MODEL_SHADING_DESCRIPTION_LIST {
-                SHADING_DESCRIPTION 0 {
-                    TEXTURE_LAYER_COUNT 0
-                    SHADER_ID 0
-                }
-            }
-            MESH_FACE_POSITION_LIST {
-                0: 0 1 2
-            }
-            MESH_FACE_SHADING_LIST {
-                0: 0
-            }
-            MESH_FACE_NORMAL_LIST {
-                0: 0 0 0
-            }
-            MODEL_POSITION_LIST {
-                0: 0.0 0.0 0.0
-                1: 1.0 0.0 0.0
-                2: 0.0 1.0 0.0
-            }
-            MODEL_NORMAL_LIST {
-                0: 0.0 0.0 1.0
-                1: 0.0 0.0 1.0
-                2: 0.0 0.0 1.0
-            }
-        }
-    }
-}
-
-RESOURCE_LIST "SHADER" {
-    RESOURCE_COUNT 1
-    RESOURCE 0 {
-        RESOURCE_NAME "default_shader"
-        ATTRIBUTE_USE_VERTEX_COLOR FALSE
-        SHADER_MATERIAL_NAME "DefaultMaterial"
-        SHADER_ACTIVE_TEXTURE_COUNT 0
-    }
-}
-
-RESOURCE_LIST "MATERIAL" {
-    RESOURCE_COUNT 1
-    RESOURCE 0 {
-        RESOURCE_NAME "DefaultMaterial"
-        MATERIAL_AMBIENT 0.2 0.2 0.2
-        MATERIAL_DIFFUSE 0.8 0.8 0.8
-        MATERIAL_SPECULAR 0.0 0.0 0.0
-        MATERIAL_EMISSIVE 0.0 0.0 0.0
-        MATERIAL_REFLECTIVITY 0.0
-        MATERIAL_OPACITY 1.0
-    }
-}
-""")
-                print(f"Created minimal fallback IDTF file: {idtf_file}")
-            except Exception as e2:
-                print(f"Failed to create fallback IDTF file: {str(e2)}")
+            return None
     
     def convert_idtf_to_u3d(self, idtf_file):
         """
