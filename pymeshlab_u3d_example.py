@@ -218,7 +218,7 @@ def main():
         logger.info("Conversion completed successfully")
         sys.exit(0)
     else:
-        logger.error("Conversion failed")
+        logger.error("Conversion failed4")
         sys.exit(1)
 
 if __name__ == "__main__":

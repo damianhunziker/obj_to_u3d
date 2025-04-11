@@ -476,7 +476,7 @@ def main():
         print(f"\nConversion successful! U3D file saved at: {u3d_file}")
         sys.exit(0)
     else:
-        print("\nConversion failed.")
+        print("\nConversion failed3.")
         sys.exit(1)
 
 if __name__ == "__main__":
